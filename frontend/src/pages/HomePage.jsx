@@ -7,10 +7,14 @@ import TeacherIcon from "../assets/teacher.png";
 const HomePage = () => {
     const navigate = useNavigate();
 
-  const handleNavigation = (role) => {
-    console.log(`Navigating to ${role}/home page`);
-    navigate(`/${role}/home`);
-  };
+ const handleNavigation = (role) => {
+  if (role === "teacher") {
+    navigate("/teacher/upload"); // <-- direct vers Upload
+  } else if (role === "student") {
+    navigate("/student/home");
+  }
+};
+
 
   return (
     <div
