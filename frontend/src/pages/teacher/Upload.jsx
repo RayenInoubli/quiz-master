@@ -172,7 +172,7 @@ function Upload() {
       {/* HEADER MODERNE */}
       <div className="upload-header">
         <div className="header-content">
-          <h1>📚 Espace de Cours</h1>
+          <h1>Espace de Cours</h1>
           <p className="subtitle">Gérez tous vos supports pédagogiques en un seul endroit</p>
           <div className="file-stats">
             <div className="stat">
