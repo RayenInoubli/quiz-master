@@ -6,7 +6,7 @@ export const uploadCourse = async (req, res) => {
       return res.status(400).json({ message: "Aucun fichier envoyé" });
     }
 
-    const fileUrl = `${process.env.BASE_URL}/uploads/${req.file.filename}`;
+    const fileUrl = `${process.env.BASE_URL || 'http://localhost:6000'}/uploads/${req.file.filename}`;
 
     const newCourse = new Course({
       name: req.file.originalname,
@@ -15,13 +15,19 @@ export const uploadCourse = async (req, res) => {
 
     await newCourse.save();
 
-    res.json({
+    res.status(201).json({
       message: "Cours uploadé et enregistré avec succès !",
-      course: newCourse
+      course: {
+        id: newCourse._id,
+        name: newCourse.name,
+        url: newCourse.url,
+        uploadDate: newCourse.createdAt
+      }
     });
 
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Erreur serveur" });
+    console.error("Erreur lors de l'upload du cours:", error);
+    res.status(500).json({ message: "Erreur serveur lors de l'enregistrement" });
   }
 };
+
