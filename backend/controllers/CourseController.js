@@ -31,3 +31,14 @@ export const uploadCourse = async (req, res) => {
   }
 };
 
+// Récupérer tous les cours
+export const getAllCourses = async (req, res) => {
+  try {
+    const courses = await Course.find().sort({ createdAt: -1 });
+    res.json(courses);
+  } catch (error) {
+    console.error("Erreur lors de la récupération des cours:", error);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+};
+
