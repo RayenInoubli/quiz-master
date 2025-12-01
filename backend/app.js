@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 
-dotenv.config();   // ⚠️ doit être au tout début !!
+dotenv.config(); // ⚠️ doit être au tout début !!
 
 import connectDB from "./configs/Db.js";
 import TeacherRoutes from "./routes/TeacherRoutes.js";
@@ -23,4 +23,5 @@ app.use("/uploads", express.static("uploads"));
 app.use("/api/v1/teachers", TeacherRoutes);
 app.use("/api/v1/students", StudentRoutes);
 app.use("/api/v1/courses", CourseRoutes);
+
 export default app;
