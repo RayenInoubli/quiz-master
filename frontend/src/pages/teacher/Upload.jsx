@@ -1,9 +1,14 @@
-// pages/teacher/Upload.jsx
 import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import "./Upload.css";
-import { 
-  FaFilePdf, FaUpload, FaTrash, FaEye, FaDownload, FaCheckCircle, FaTimesCircle 
+import {
+  FaFilePdf,
+  FaUpload,
+  FaTrash,
+  FaEye,
+  FaDownload,
+  FaCheckCircle,
+  FaTimesCircle,
 } from "react-icons/fa";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
@@ -32,15 +37,15 @@ function Upload() {
 
   const handleAddFile = (e) => {
     const selected = Array.from(e.target.files);
-    const mapped = selected.map(file => ({
+    const mapped = selected.map((file) => ({
       id: Math.random().toString(36).substr(2, 9),
       file,
       name: file.name,
       size: (file.size / 1024 / 1024).toFixed(2) + " MB",
       progress: 0,
-      status: "pending"
+      status: "pending",
     }));
-    setFiles(prev => [...prev, ...mapped]);
+    setFiles((prev) => [...prev, ...mapped]);
   };
 
   const handleUpload = async () => {
@@ -54,27 +59,33 @@ function Upload() {
       formData.append("pdf", item.file);
 
       try {
-        setFiles(prev => prev.map(f => 
-          f.id === item.id ? { ...f, status: "uploading" } : f
-        ));
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === item.id ? { ...f, status: "uploading" } : f
+          )
+        );
 
         await axios.post(`${BACKEND_URL}/api/v1/courses/upload`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
           onUploadProgress: (progressEvent) => {
-            const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            setFiles(prev => prev.map(f => 
-              f.id === item.id ? { ...f, progress: percent } : f
-            ));
-          }
+            const percent = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
+            setFiles((prev) =>
+              prev.map((f) =>
+                f.id === item.id ? { ...f, progress: percent } : f
+              )
+            );
+          },
         });
 
-        setFiles(prev => prev.map(f => 
-          f.id === item.id ? { ...f, status: "success" } : f
-        ));
+        setFiles((prev) =>
+          prev.map((f) => (f.id === item.id ? { ...f, status: "success" } : f))
+        );
       } catch (err) {
-        setFiles(prev => prev.map(f => 
-          f.id === item.id ? { ...f, status: "error" } : f
-        ));
+        setFiles((prev) =>
+          prev.map((f) => (f.id === item.id ? { ...f, status: "error" } : f))
+        );
       }
     }
 
@@ -83,7 +94,25 @@ function Upload() {
   };
 
   const removeFile = (id) => {
-    setFiles(prev => prev.filter(f => f.id !== id));
+    setFiles((prev) => prev.filter((f) => f.id !== id));
+  };
+
+  // Fonction pour formater la date en jj.mm.aaaa
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "";
+
+      const day = date.getDate().toString().padStart(2, "0");
+      const month = (date.getMonth() + 1).toString().padStart(2, "0");
+      const year = date.getFullYear();
+
+      return `${day}.${month}.${year}`;
+    } catch (error) {
+      return "";
+    }
   };
 
   return (
@@ -100,21 +129,37 @@ function Upload() {
         {/* Barre d'actions améliorée */}
         <div className="actions-bar">
           <div className="actions-left">
-            <button className="primary-btn" onClick={() => fileInputRef.current.click()}>
+            <button
+              className="primary-btn"
+              onClick={() => fileInputRef.current.click()}
+            >
               <FaUpload /> Ajouter des fichiers
             </button>
-            <input ref={fileInputRef} type="file" multiple style={{display: "none"}} onChange={handleAddFile} />
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              style={{ display: "none" }}
+              onChange={handleAddFile}
+            />
 
-            {files.some(f => f.status === "pending") && (
-              <button className="secondary-btn" onClick={handleUpload} disabled={loading}>
+            {files.some((f) => f.status === "pending") && (
+              <button
+                className="secondary-btn"
+                onClick={handleUpload}
+                disabled={loading}
+              >
                 {loading ? "Upload en cours..." : "Uploader"}
               </button>
             )}
           </div>
 
-          <button 
-            className="secondary-btn" 
-            onClick={() => { setShowAllCourses(!showAllCourses); fetchAllCourses(); }}
+          <button
+            className="secondary-btn"
+            onClick={() => {
+              setShowAllCourses(!showAllCourses);
+              fetchAllCourses();
+            }}
           >
             {showAllCourses ? "Masquer les cours" : "Voir tous les cours"}
           </button>
@@ -125,39 +170,45 @@ function Upload() {
           <div className="files-container">
             <h3>📤 Fichiers à uploader ({files.length})</h3>
             <div className="files-grid">
-              {files.map(f => (
+              {files.map((f) => (
                 <div key={f.id} className={`file-card ${f.status}`}>
                   <div className="file-header">
                     <FaFilePdf className="file-icon pdf" />
                     <div className="file-status">
-                      {f.status === "uploading" && <div className="loading-spinner"></div>}
-                      {f.status === "success" && <FaCheckCircle className="status-icon success" />}
-                      {f.status === "error" && <FaTimesCircle className="status-icon error" />}
+                      {f.status === "uploading" && (
+                        <div className="loading-spinner"></div>
+                      )}
+                      {f.status === "success" && (
+                        <FaCheckCircle className="status-icon success" />
+                      )}
+                      {f.status === "error" && (
+                        <FaTimesCircle className="status-icon error" />
+                      )}
                     </div>
                   </div>
-                  
+
                   <div className="file-content">
                     <div className="file-name">{f.name}</div>
                     <div className="file-meta">
                       <span className="file-size">{f.size}</span>
                       <span className="file-type-badge">PDF</span>
                     </div>
-                    
+
                     {f.status === "uploading" && (
                       <div className="upload-progress">
                         <div className="progress-bar">
-                          <div 
-                            className="progress-fill" 
+                          <div
+                            className="progress-fill"
                             style={{ width: `${f.progress}%` }}
                           ></div>
                         </div>
                         <div className="progress-text">{f.progress}%</div>
                       </div>
                     )}
-                    
+
                     <div className="file-actions">
-                      <button 
-                        className="action-btn delete-btn" 
+                      <button
+                        className="action-btn delete-btn"
                         onClick={() => removeFile(f.id)}
                         title="Supprimer"
                       >
@@ -183,7 +234,7 @@ function Upload() {
               </div>
             ) : (
               <div className="files-grid">
-                {uploadedCourses.map(course => (
+                {uploadedCourses.map((course) => (
                   <div key={course._id} className="file-card success">
                     <div className="file-header">
                       <FaFilePdf className="file-icon pdf" />
@@ -191,28 +242,28 @@ function Upload() {
                         <FaCheckCircle className="status-icon success" />
                       </div>
                     </div>
-                    
+
                     <div className="file-content">
                       <div className="file-name">{course.name}</div>
                       <div className="file-meta">
                         <span className="file-size">
-                          {new Date(course.createdAt).toLocaleDateString('fr-FR')}
+                          {formatDate(course.createdAt)}
                         </span>
                         <span className="file-type-badge">PDF</span>
                       </div>
-                      
+
                       <div className="file-actions">
-                        <a 
-                          href={course.url} 
-                          target="_blank" 
+                        <a
+                          href={course.url}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="action-btn preview-btn"
                           title="Voir le fichier"
                         >
                           <FaEye />
                         </a>
-                        <a 
-                          href={course.url} 
+                        <a
+                          href={course.url}
                           download
                           className="action-btn preview-btn"
                           title="Télécharger"
@@ -235,8 +286,8 @@ function Upload() {
             <h3>Aucun fichier sélectionné</h3>
             <p>Ajoutez des fichiers PDF pour commencer l'upload</p>
             <small>Formats acceptés: PDF uniquement</small>
-            <button 
-              className="browse-btn" 
+            <button
+              className="browse-btn"
               onClick={() => fileInputRef.current.click()}
             >
               <FaUpload /> Parcourir les fichiers
