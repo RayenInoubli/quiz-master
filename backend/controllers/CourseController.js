@@ -7,7 +7,7 @@ export const uploadCourse = async (req, res) => {
     }
 
     const fileUrl = `${
-      process.env.BASE_URL || "http://localhost:6000"
+      process.env.BASE_URL || "http://localhost:4000"
     }/uploads/${req.file.filename}`;
 
     const newCourse = new Course({

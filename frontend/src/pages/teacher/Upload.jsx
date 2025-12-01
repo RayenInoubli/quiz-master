@@ -11,7 +11,7 @@ import {
   FaTimesCircle,
 } from "react-icons/fa";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+const BACKEND_URL = import.meta.env.VITE_API_URL;
 
 function Upload() {
   const [files, setFiles] = useState([]);

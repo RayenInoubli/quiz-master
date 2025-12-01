@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:6000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1';
 
 console.log('API URL configurée:', API_BASE_URL);
 
@@ -8,10 +8,10 @@ export const courseService = {
       const formData = new FormData();
       formData.append('file', file);
 
-      console.log('Upload vers:', `${API_BASE_URL}/courses/upload`);
+      console.log('Upload vers:', `${API_BASE_URL}/api/v1/courses/upload`);
 
-      const response = await fetch(`${API_BASE_URL}/courses/upload`, {
-        method: 'POST',
+      const response = await fetch(`${API_BASE_URL}/api/v1//courses/upload`, {
+        method: "POST",
         body: formData,
       });
 
@@ -30,12 +30,12 @@ export const courseService = {
 
   async getAllCourses() {
     try {
-      console.log('Fetching from:', `${API_BASE_URL}/courses`);
+      console.log("Fetching from:", `${API_BASE_URL}/api/v1//courses`);
       
-      const response = await fetch(`${API_BASE_URL}/courses`, {
-        method: 'GET',
+      const response = await fetch(`${API_BASE_URL}/api/v1//courses`, {
+        method: "GET",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
 
@@ -52,9 +52,12 @@ export const courseService = {
 
   async deleteCourse(courseId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/courses/${courseId}`, {
-        method: 'DELETE',
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/api/v1//courses/${courseId}`,
+        {
+          method: "DELETE",
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`Erreur ${response.status}: ${response.statusText}`);
