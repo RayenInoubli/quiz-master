@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import "./StudentHome.css";
 import { FaFilePdf, FaEye } from "react-icons/fa";
@@ -10,18 +10,7 @@ function StudentHome() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const cachedCourses = localStorage.getItem("student-courses");
-    const cacheTimestamp = localStorage.getItem("student-courses-timestamp");
-    const isCacheValid =
-      cacheTimestamp && Date.now() - cacheTimestamp < 5 * 60 * 1000;
-
-    if (cachedCourses && isCacheValid) {
-      console.log("Chargement depuis le cache");
-      setCourses(JSON.parse(cachedCourses));
-    } else {
-      console.log("Chargement depuis l'API");
-      fetchCourses();
-    }
+    fetchCourses();
   }, []);
 
   const fetchCourses = async () => {
@@ -32,9 +21,6 @@ function StudentHome() {
       console.log("Cours reçus:", res.data);
 
       setCourses(res.data);
-
-      localStorage.setItem("student-courses", JSON.stringify(res.data));
-      localStorage.setItem("student-courses-timestamp", Date.now().toString());
     } catch (err) {
       console.error("Erreur lors du chargement des cours:", err);
     } finally {
