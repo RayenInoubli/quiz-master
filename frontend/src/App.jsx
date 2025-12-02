@@ -5,6 +5,7 @@ import Upload from "./pages/teacher/Upload.jsx";
 import StudentCourses from "./pages/student/StudentCourses.jsx";
 import TeacherHome from "./pages/teacher/TeacherHome.jsx";
 import TeacherQuiz from "./pages/teacher/TeacherQuiz.jsx";
+import StudentQuiz from "./pages/student/StudentQuizzes.jsx";
 
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
       <Route path="/teacher/home" element={<TeacherHome />} />
       <Route path="teacher/quiz" element={<TeacherQuiz />} />
       <Route path="/teacher/upload" element={<Upload />} />
+      <Route path="/student/quizzes" element={<StudentQuiz />} />
     </Routes>
   );
 }
