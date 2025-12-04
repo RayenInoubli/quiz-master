@@ -113,4 +113,36 @@ export const teacherService = {
       throw error;
     }
   },
+
+  /**
+   * Générer un quiz à partir d'un cours
+   */
+  async generateQuiz({ courseId, title, description, numberOfQuestions }) {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/v1/teachers/quizz/generate`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            courseId,
+            title,
+            description,
+            numberOfQuestions,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Generate quiz error:", error);
+      throw new Error("Impossible de générer le quiz.");
+    }
+  },
 };

@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Card,
   Row,
@@ -19,16 +18,17 @@ import {
   RobotOutlined,
 } from "@ant-design/icons";
 import QuizDetailsModal from "../../components/QuizDetailsModal";
+import GenerateQuizModal from "../../components/GenerateQuizModal.jsx";
 import { teacherService } from "../../services/TeacherService";
 
 const { Title, Text, Paragraph } = Typography;
 
 function TeacherQuizz() {
-  const navigate = useNavigate();
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isGenerateVisible, setIsGenerateVisible] = useState(false);
 
   useEffect(() => {
     fetchQuizzes();
@@ -82,7 +82,7 @@ function TeacherQuizz() {
   };
 
   const handleGenerateQuiz = () => {
-    navigate("/teacher/generate-quiz");
+    setIsGenerateVisible(true);
   };
 
   const handleQuestionStatusChange = async (quizId, questionId, status) => {
@@ -413,6 +413,12 @@ function TeacherQuizz() {
         onClose={() => setIsModalVisible(false)}
         quiz={selectedQuiz}
         onQuestionStatusChange={handleQuestionStatusChange}
+      />
+
+      <GenerateQuizModal
+        visible={isGenerateVisible}
+        onClose={() => setIsGenerateVisible(false)}
+        onGenerated={() => fetchQuizzes()}
       />
     </div>
   );

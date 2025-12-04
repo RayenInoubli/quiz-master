@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Modal,
   Typography,
@@ -34,24 +34,9 @@ const QuizDetailsModal = ({
   onQuestionStatusChange,
 }) => {
   const [expandedKeys, setExpandedKeys] = useState([]);
-  const [questions, setQuestions] = useState([]);
-
-  // Mettre à jour les questions quand le quiz change
-  useEffect(() => {
-    if (quiz && quiz.questions) {
-      setQuestions(quiz.questions);
-    }
-  }, [quiz]);
+  const questions = quiz?.questions || [];
 
   const handleStatusChange = (questionId, checked) => {
-    // Mettre à jour localement
-    setQuestions(
-      questions.map((q) =>
-        q._id === questionId ? { ...q, status: checked } : q
-      )
-    );
-
-    // Appeler le callback parent
     if (onQuestionStatusChange && quiz) {
       onQuestionStatusChange(quiz._id, questionId, checked);
     }

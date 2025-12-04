@@ -11,7 +11,7 @@ import {
   FaTimesCircle,
 } from "react-icons/fa";
 
-const BACKEND_URL = import.meta.env.VITE_API_URL;
+const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 function Upload() {
   const [files, setFiles] = useState([]);
@@ -19,11 +19,6 @@ function Upload() {
   const [loading, setLoading] = useState(false);
   const [showAllCourses, setShowAllCourses] = useState(false);
   const fileInputRef = useRef(null);
-
-  // Charger tous les cours au montage
-  useEffect(() => {
-    fetchAllCourses();
-  }, []);
 
   const fetchAllCourses = async () => {
     try {
@@ -34,6 +29,11 @@ function Upload() {
       alert("Erreur lors du chargement des cours");
     }
   };
+
+  // Charger tous les cours au montage
+  useEffect(() => {
+    fetchAllCourses();
+  }, []);
 
   const handleAddFile = (e) => {
     const selected = Array.from(e.target.files);
