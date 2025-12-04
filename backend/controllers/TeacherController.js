@@ -1,4 +1,5 @@
 import QuizModel from "../models/QuizModel.js";
+import Course from "../models/Course.js";
 
 
 export const getAllQuizzes = async (req, res) => {
@@ -231,6 +232,161 @@ export const publishQuiz = async (req, res) => {
     console.error("❌ Erreur lors de la publication du quiz:", error);
     res.status(500).json({
       message: "Erreur lors de la publication du quiz",
+      error: error.message,
+    });
+  }
+};
+
+// Générer un quiz à partir d'un cours en utilisant Grok (xAI)
+export const generateQuizFromCourse = async (req, res) => {
+  try {
+    const {
+      courseId,
+      title,
+      description,
+      numberOfQuestions = 10,
+    } = req.body;
+
+    if (!courseId || !title || !description) {
+      return res.status(400).json({
+        message: "courseId, title et description sont requis",
+      });
+    }
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: "Cours introuvable" });
+    }
+
+    const groqApiKey = process.env.GROQ_API_KEY;
+    if (!groqApiKey) {
+      return res.status(500).json({
+        message: "Clé API Groq manquante. Définissez GROQ_API_KEY dans .env",
+      });
+    }
+
+    let courseText = "";
+    try {
+      const pdfResponse = await fetch(course.url);
+      if (!pdfResponse.ok) {
+        throw new Error(`Téléchargement PDF échoué: ${pdfResponse.status}`);
+      }
+      const pdfArrayBuffer = await pdfResponse.arrayBuffer();
+      const { default: pdfParse } = await import("pdf-parse");
+      const parsed = await pdfParse(Buffer.from(pdfArrayBuffer));
+      courseText = (parsed.text || "").trim();
+      if (courseText.length > 20000) {
+        courseText = courseText.slice(0, 20000);
+      }
+    } catch (e) {
+      console.warn("⚠️ Impossible d'extraire le texte du PDF:", e.message);
+      courseText = `Cours: ${course.name}. Consignes: ${description}`;
+    }
+
+    const completionResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${groqApiKey}`,
+      },
+      body: JSON.stringify({
+        model: process.env.GROQ_MODEL || "llama-3.1-8b-instant",
+        messages: [
+          {
+            role: "system",
+            content: "Tu génères des quiz QCM strictement au format JSON demandé.",
+          },
+          {
+            role: "user",
+            content: [
+              "Génère un quiz au format JSON conforme au schéma suivant:",
+              "{",
+              "  \"title\": string,",
+              "  \"description\": string,",
+              "  \"questions\": [",
+              "    {",
+              "      \"text\": string,",
+              "      \"answers\": [",
+              "        { \"text\": string, \"isCorrect\": boolean },",
+              "        { \"text\": string, \"isCorrect\": boolean },",
+              "        { \"text\": string, \"isCorrect\": boolean },",
+              "        { \"text\": string, \"isCorrect\": boolean }",
+              "      ]",
+              "    }",
+              "  ]",
+              "}",
+              "Contraintes:",
+              "- Génère exactement "+numberOfQuestions+" questions.",
+              "- Chaque question doit avoir 4 réponses et une seule réponse avec isCorrect=true.",
+              "- Les réponses doivent être courtes et claires.",
+              "- Utilise le contenu du cours ci-dessous.",
+              "Contenu du cours:",
+              courseText,
+            ].join("\n"),
+          },
+        ],
+        temperature: 0.2,
+        response_format: { type: "json_object" },
+        max_tokens: 1200,
+      }),
+    });
+
+    if (!completionResponse.ok) {
+      const errTxt = await completionResponse.text();
+      throw new Error(`Groq API error: ${completionResponse.status} ${errTxt}`);
+    }
+
+    const completion = await completionResponse.json();
+    const content = completion?.choices?.[0]?.message?.content || "{}";
+
+    let generated;
+    try {
+      generated = JSON.parse(content);
+    } catch (parseErr) {
+      const start = content.indexOf("{");
+      const end = content.lastIndexOf("}");
+      if (start !== -1 && end !== -1) {
+        generated = JSON.parse(content.slice(start, end + 1));
+      } else {
+        throw new Error("Réponse Grok non JSON");
+      }
+    }
+
+    const questionsWithOrder = (generated.questions || []).map((q, idx) => ({
+      text: q.text,
+      answers: (q.answers || []).map((a) => ({
+        text: a.text,
+        isCorrect: !!a.isCorrect,
+      })),
+      status: null,
+      order: idx + 1,
+    }));
+
+    const newQuiz = new QuizModel({
+      title: title || generated.title || `Quiz du cours ${course.name}`,
+      description: description || generated.description || "Quiz généré automatiquement",
+      courseSource: course._id,
+      questions: questionsWithOrder,
+      questionsCount: questionsWithOrder.length,
+      isPublished: false,
+    });
+
+    await newQuiz.save();
+
+    res.status(201).json({
+      message: "Quiz généré et enregistré",
+      quiz: {
+        _id: newQuiz._id,
+        title: newQuiz.title,
+        description: newQuiz.description,
+        questionsCount: newQuiz.questionsCount,
+        isPublished: newQuiz.isPublished,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Erreur lors de la génération du quiz:", error);
+    res.status(500).json({
+      message: "Erreur lors de la génération du quiz",
       error: error.message,
     });
   }
