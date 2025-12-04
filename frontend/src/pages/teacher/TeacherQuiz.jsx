@@ -64,6 +64,7 @@ function TeacherQuizz() {
 
       return `${day}.${month}.${year}`;
     } catch (error) {
+      console.error("Erreur lors de la formatage de la date:", error);
       return "";
     }
   };
@@ -413,6 +414,10 @@ function TeacherQuizz() {
         onClose={() => setIsModalVisible(false)}
         quiz={selectedQuiz}
         onQuestionStatusChange={handleQuestionStatusChange}
+        onPublished={() => {
+          setIsModalVisible(false);
+          fetchQuizzes();
+        }}
       />
 
       <GenerateQuizModal

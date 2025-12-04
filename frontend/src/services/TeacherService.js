@@ -115,6 +115,28 @@ export const teacherService = {
   },
 
   /**
+   * Publier un quiz
+   */
+  async publishQuiz(quizId) {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/v1/teachers/quizz/${quizId}/publish`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      if (!response.ok) {
+        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Publish quiz error:", error);
+      throw new Error("Impossible de publier le quiz.");
+    }
+  },
+
+  /**
    * Générer un quiz à partir d'un cours
    */
   async generateQuiz({ courseId, title, description, numberOfQuestions }) {

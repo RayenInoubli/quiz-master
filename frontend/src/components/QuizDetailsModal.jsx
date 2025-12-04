@@ -11,6 +11,7 @@ import {
   Flex,
   Collapse,
   Badge,
+  message,
 } from "antd";
 import {
   FileTextOutlined,
@@ -32,9 +33,11 @@ const QuizDetailsModal = ({
   onClose,
   quiz,
   onQuestionStatusChange,
+  onPublished,
 }) => {
   const [expandedKeys, setExpandedKeys] = useState([]);
   const questions = quiz?.questions || [];
+  const [publishing, setPublishing] = useState(false);
 
   const handleStatusChange = (questionId, checked) => {
     if (onQuestionStatusChange && quiz) {
@@ -50,6 +53,20 @@ const QuizDetailsModal = ({
 
   const approvedCount = questions.filter((q) => q.status === true).length;
   const totalCount = questions.length;
+
+  const handlePublish = async () => {
+    if (!quiz) return;
+    try {
+      setPublishing(true);
+      await teacherService.publishQuiz(quiz._id);
+      message.success("Quiz publié avec succès");
+      if (onPublished) onPublished();
+    } catch (err) {
+      message.error(err?.message || "Impossible de publier le quiz");
+    } finally {
+      setPublishing(false);
+    }
+  };
 
   return (
     <Modal
@@ -410,7 +427,7 @@ const QuizDetailsModal = ({
       >
         <div>
           <Text strong style={{ marginRight: "16px" }}>
-            Taux de validation:{" "}
+            Taux de validation: {" "}
             <span style={{ color: "#52c41a" }}>
               {totalCount > 0
                 ? Math.round((approvedCount / totalCount) * 100)
@@ -424,6 +441,19 @@ const QuizDetailsModal = ({
         </div>
         <Space>
           <Button onClick={onClose}>Fermer</Button>
+          <Button
+            type="primary"
+            onClick={handlePublish}
+            disabled={approvedCount === 0 || quiz?.isPublished}
+            loading={publishing}
+            style={{
+              background:
+                "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              border: "none",
+            }}
+          >
+            Publier le quiz
+          </Button>
         </Space>
       </div>
     </Modal>
@@ -431,3 +461,4 @@ const QuizDetailsModal = ({
 };
 
 export default QuizDetailsModal;
+import { teacherService } from "../services/TeacherService";
