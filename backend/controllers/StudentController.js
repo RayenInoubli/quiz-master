@@ -2,7 +2,7 @@ import QuizModel from "../models/QuizModel.js";
 
 export const getAllQuizzes = async (req, res) => {
   try {
-    const quizzes = await QuizModel.find()
+    const quizzes = await QuizModel.find({ isPublished: true })
       .select("-questions") // Exclure les questions pour alléger la réponse
       .populate("courseSource", "title")
       .sort({ createdAt: -1 });
