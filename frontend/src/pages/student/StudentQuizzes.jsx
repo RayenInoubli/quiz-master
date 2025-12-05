@@ -620,7 +620,7 @@ function StudentQuiz() {
                                 color: "#8b5cf6",
                               }}
                             >
-                              {quiz.questionsCount || 0}
+                              {quiz.validatedQuestionsCount || 0}
                             </Text>
                           </div>
                         </Space>

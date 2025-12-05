@@ -6,6 +6,7 @@ import {
   createQuiz,
   deleteQuiz,
   publishQuiz,
+  unpublishQuiz,
   generateQuizFromCourse,
 } from "../controllers/TeacherController.js";
 
@@ -17,6 +18,7 @@ router.get("/quizz/:id", getQuizById);
 router.post("/quizz", createQuiz);
 router.delete("/quizz/:id", deleteQuiz);
 router.patch("/quizz/:id/publish", publishQuiz);
+router.patch("/quizz/:id/unpublish", unpublishQuiz);
 router.post("/quizz/generate", generateQuizFromCourse);
 
 // Route pour mettre à jour le statut d'une question

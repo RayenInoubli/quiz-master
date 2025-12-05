@@ -237,6 +237,45 @@ export const publishQuiz = async (req, res) => {
   }
 };
 
+export const unpublishQuiz = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const quiz = await QuizModel.findById(id);
+
+    if (!quiz) {
+      return res.status(404).json({
+        message: "Quiz non trouvé",
+      });
+    }
+
+    // Vérifier si le quiz est déjà dépublié
+    if (!quiz.isPublished) {
+      return res.status(400).json({
+        message: "Le quiz est déjà dépublié",
+      });
+    }
+
+    quiz.isPublished = false;
+    await quiz.save();
+
+    res.status(200).json({
+      message: "Quiz dépublié avec succès",
+      quiz: {
+        _id: quiz._id,
+        title: quiz.title,
+        isPublished: quiz.isPublished,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Erreur lors de la dépublication du quiz:", error);
+    res.status(500).json({
+      message: "Erreur lors de la dépublication du quiz",
+      error: error.message,
+    });
+  }
+};
+
 // Générer un quiz à partir d'un cours en utilisant Grok (xAI)
 export const generateQuizFromCourse = async (req, res) => {
   try {

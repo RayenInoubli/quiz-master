@@ -136,6 +136,25 @@ export const teacherService = {
     }
   },
 
+  async unpublishQuiz(quizId) {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/v1/teachers/quizz/${quizId}/unpublish`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      if (!response.ok) {
+        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Unpublish quiz error:", error);
+      throw new Error("Impossible de dépublier le quiz.");
+    }
+  },
+  
   /**
    * Générer un quiz à partir d'un cours
    */

@@ -12,6 +12,7 @@ import {
   Collapse,
   Badge,
   message,
+  Popconfirm,
 } from "antd";
 import {
   FileTextOutlined,
@@ -23,7 +24,10 @@ import {
   CloseOutlined as CloseIcon,
   RightOutlined,
   DownOutlined,
+  EyeOutlined,
+  EyeInvisibleOutlined,
 } from "@ant-design/icons";
+import { teacherService } from "../services/TeacherService";
 
 const { Title, Text, Paragraph } = Typography;
 const { Panel } = Collapse;
@@ -36,12 +40,67 @@ const QuizDetailsModal = ({
   onPublished,
 }) => {
   const [expandedKeys, setExpandedKeys] = useState([]);
-  const questions = quiz?.questions || [];
+  const [localQuestions, setLocalQuestions] = useState(quiz?.questions || []);
+  const [updatingQuestions, setUpdatingQuestions] = useState({});
   const [publishing, setPublishing] = useState(false);
+  const [unpublishing, setUnpublishing] = useState(false);
 
-  const handleStatusChange = (questionId, checked) => {
-    if (onQuestionStatusChange && quiz) {
-      onQuestionStatusChange(quiz._id, questionId, checked);
+  // Update local questions when quiz changes
+  React.useEffect(() => {
+    if (quiz?.questions) {
+      setLocalQuestions(quiz.questions);
+    }
+  }, [quiz]);
+
+  const handleStatusChange = async (questionId, checked) => {
+    if (!quiz) return;
+
+    // Prevent accordion from opening
+    if (event) {
+      event.stopPropagation();
+    }
+
+    // Optimistic update
+    const previousQuestions = [...localQuestions];
+    const updatedQuestions = localQuestions.map((q) =>
+      q._id === questionId ? { ...q, status: checked } : q
+    );
+
+    // Update local state immediately
+    setLocalQuestions(updatedQuestions);
+    setUpdatingQuestions((prev) => ({ ...prev, [questionId]: true }));
+
+    try {
+      // Call API - suppress default success message if possible
+      const result = await teacherService.updateQuestionStatus(
+        quiz._id,
+        questionId,
+        checked
+      );
+
+      // Update parent component if callback exists - tell it not to show message
+      if (onQuestionStatusChange) {
+        onQuestionStatusChange(quiz._id, questionId, checked, true); // Add a flag to suppress message
+      }
+
+      // Show success message ONLY in the modal
+      // message.success({
+      //   content: `Question ${checked ? "validée" : "rejetée"} avec succès`,
+      //   key: "question-status-update", // Use a unique key to prevent duplicate
+      //   duration: 2,
+      // });
+    } catch (err) {
+      // Revert optimistic update on error
+      setLocalQuestions(previousQuestions);
+      message.error({
+        content:
+          err?.message ||
+          "Impossible de mettre à jour le statut de la question",
+        key: "question-status-error",
+        duration: 3,
+      });
+    } finally {
+      setUpdatingQuestions((prev) => ({ ...prev, [questionId]: false }));
     }
   };
 
@@ -51,20 +110,34 @@ const QuizDetailsModal = ({
 
   if (!quiz) return null;
 
-  const approvedCount = questions.filter((q) => q.status === true).length;
-  const totalCount = questions.length;
+  const approvedCount = localQuestions.filter((q) => q.status === true).length;
+  const totalCount = localQuestions.length;
+  const isPublished = quiz?.isPublished === true;
 
-  const handlePublish = async () => {
+  // Handle publish/unpublish toggle
+  const handlePublishToggle = async () => {
     if (!quiz) return;
+
     try {
-      setPublishing(true);
-      await teacherService.publishQuiz(quiz._id);
-      message.success("Quiz publié avec succès");
+      if (isPublished) {
+        setUnpublishing(true);
+        await teacherService.unpublishQuiz(quiz._id);
+        message.success("Quiz dépublié avec succès");
+      } else {
+        setPublishing(true);
+        await teacherService.publishQuiz(quiz._id);
+        message.success("Quiz publié avec succès");
+      }
+
       if (onPublished) onPublished();
     } catch (err) {
-      message.error(err?.message || "Impossible de publier le quiz");
+      message.error(
+        err?.message ||
+          `Impossible de ${isPublished ? "dépublier" : "publier"} le quiz`
+      );
     } finally {
       setPublishing(false);
+      setUnpublishing(false);
     }
   };
 
@@ -121,8 +194,13 @@ const QuizDetailsModal = ({
               Cours: {quiz.courseSource || "N/A"}
             </Tag>
             <Tag color="green" icon={<QuestionCircleOutlined />}>
-              {questions.length} questions
+              {totalCount} questions
             </Tag>
+            {isPublished && (
+              <Tag color="purple" icon={<EyeOutlined />}>
+                Publié
+              </Tag>
+            )}
           </Space>
         </Flex>
       </div>
@@ -166,6 +244,15 @@ const QuizDetailsModal = ({
                 ? new Date(quiz.createdAt).toLocaleDateString("fr-FR")
                 : "N/A"}
             </Text>
+            {isPublished && quiz.updatedAt && (
+              <Text
+                type="secondary"
+                style={{ fontSize: "13px", marginLeft: "16px" }}
+              >
+                Publié le:{" "}
+                {new Date(quiz.updatedAt).toLocaleDateString("fr-FR")}
+              </Text>
+            )}
           </div>
         </Card>
 
@@ -179,7 +266,7 @@ const QuizDetailsModal = ({
             marginBottom: "16px",
           }}
         >
-          Questions ({questions.length})
+          Questions ({totalCount})
         </Divider>
 
         <div style={{ marginBottom: "16px" }}>
@@ -190,7 +277,7 @@ const QuizDetailsModal = ({
             bordered={false}
             style={{ background: "transparent" }}
           >
-            {questions.map((question, index) => (
+            {localQuestions.map((question, index) => (
               <Panel
                 key={question._id}
                 header={
@@ -200,6 +287,17 @@ const QuizDetailsModal = ({
                       alignItems: "center",
                       width: "100%",
                       padding: "8px 0",
+                    }}
+                    onClick={(e) => {
+                      // Toggle panel only when clicking outside the switch
+                      if (!e.target.closest(".question-switch-container")) {
+                        const newExpandedKeys = expandedKeys.includes(
+                          question._id
+                        )
+                          ? expandedKeys.filter((key) => key !== question._id)
+                          : [...expandedKeys, question._id];
+                        setExpandedKeys(newExpandedKeys);
+                      }
                     }}
                   >
                     <div style={{ flex: 1 }}>
@@ -235,6 +333,7 @@ const QuizDetailsModal = ({
                       }}
                     >
                       <div
+                        className="question-switch-container"
                         style={{
                           display: "flex",
                           alignItems: "center",
@@ -242,15 +341,31 @@ const QuizDetailsModal = ({
                           minWidth: "180px",
                           justifyContent: "flex-end",
                         }}
+                        onClick={(e) => e.stopPropagation()} // Prevent panel toggle
                       >
                         <Switch
                           checked={question.status === true}
-                          checkedChildren={<CheckCircleOutlined />}
-                          unCheckedChildren={<CloseCircleOutlined />}
-                          onChange={(checked) =>
-                            handleStatusChange(question._id, checked)
+                          checkedChildren={
+                            updatingQuestions[question._id] ? (
+                              <span style={{ fontSize: "10px" }}>...</span>
+                            ) : (
+                              <CheckCircleOutlined />
+                            )
                           }
+                          unCheckedChildren={
+                            updatingQuestions[question._id] ? (
+                              <span style={{ fontSize: "10px" }}>...</span>
+                            ) : (
+                              <CloseCircleOutlined />
+                            )
+                          }
+                          onChange={(checked) => {
+                            // Prevent default event bubbling
+                            handleStatusChange(question._id, checked);
+                          }}
+                          onClick={(e) => e.stopPropagation()} // Additional prevention
                           size="small"
+                          loading={updatingQuestions[question._id]}
                           style={{
                             background:
                               question.status === true
@@ -268,7 +383,9 @@ const QuizDetailsModal = ({
                             textAlign: "center",
                           }}
                         >
-                          {question.status === true
+                          {updatingQuestions[question._id]
+                            ? "Mise à jour..."
+                            : question.status === true
                             ? "Validée"
                             : question.status === false
                             ? "Rejetée"
@@ -404,6 +521,14 @@ const QuizDetailsModal = ({
                       <Text type="secondary" style={{ fontSize: "12px" }}>
                         Question #{index + 1}
                       </Text>
+                      <Text type="secondary" style={{ fontSize: "12px" }}>
+                        Statut:{" "}
+                        {question.status === true
+                          ? "Validée"
+                          : question.status === false
+                          ? "Rejetée"
+                          : "À valider"}
+                      </Text>
                     </Space>
                   </div>
                 </div>
@@ -427,7 +552,7 @@ const QuizDetailsModal = ({
       >
         <div>
           <Text strong style={{ marginRight: "16px" }}>
-            Taux de validation: {" "}
+            Taux de validation:{" "}
             <span style={{ color: "#52c41a" }}>
               {totalCount > 0
                 ? Math.round((approvedCount / totalCount) * 100)
@@ -441,19 +566,43 @@ const QuizDetailsModal = ({
         </div>
         <Space>
           <Button onClick={onClose}>Fermer</Button>
-          <Button
-            type="primary"
-            onClick={handlePublish}
-            disabled={approvedCount === 0 || quiz?.isPublished}
-            loading={publishing}
-            style={{
-              background:
-                "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-              border: "none",
-            }}
-          >
-            Publier le quiz
-          </Button>
+          {isPublished ? (
+            <Popconfirm
+              title="Dépublier le quiz"
+              description="Êtes-vous sûr de vouloir dépublier ce quiz ? Les étudiants ne pourront plus y accéder."
+              onConfirm={handlePublishToggle}
+              okText="Oui, dépublier"
+              cancelText="Annuler"
+            >
+              <Button
+                type="primary"
+                danger
+                loading={unpublishing}
+                icon={<EyeInvisibleOutlined />}
+                style={{
+                  background:
+                    "linear-gradient(135deg, #f56565 0%, #c53030 100%)",
+                  border: "none",
+                }}
+              >
+                Dépublier le quiz
+              </Button>
+            </Popconfirm>
+          ) : (
+            <Button
+              type="primary"
+              onClick={handlePublishToggle}
+              disabled={approvedCount === 0}
+              loading={publishing}
+              icon={<EyeOutlined />}
+              style={{
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                border: "none",
+              }}
+            >
+              Publier le quiz
+            </Button>
+          )}
         </Space>
       </div>
     </Modal>
@@ -461,4 +610,3 @@ const QuizDetailsModal = ({
 };
 
 export default QuizDetailsModal;
-import { teacherService } from "../services/TeacherService";

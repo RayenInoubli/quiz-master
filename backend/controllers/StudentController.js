@@ -2,10 +2,50 @@ import QuizModel from "../models/QuizModel.js";
 
 export const getAllQuizzes = async (req, res) => {
   try {
-    const quizzes = await QuizModel.find({ isPublished: true })
-      .select("-questions") // Exclure les questions pour alléger la réponse
-      .populate("courseSource", "title")
-      .sort({ createdAt: -1 });
+    const quizzes = await QuizModel.aggregate([
+      {
+        $match: { isPublished: true },
+      },
+      {
+        $lookup: {
+          from: "courses",
+          localField: "courseSource",
+          foreignField: "_id",
+          as: "courseSource",
+          pipeline: [{ $project: { title: 1 } }],
+        },
+      },
+      {
+        $unwind: {
+          path: "$courseSource",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $addFields: {
+          validatedQuestionsCount: {
+            $size: {
+              $filter: {
+                input: "$questions",
+                as: "question",
+                cond: { $eq: ["$$question.status", true] },
+              },
+            },
+          },
+          // Pour garder le count total des questions
+          totalQuestionsCount: { $size: "$questions" },
+        },
+      },
+      {
+        $project: {
+          questions: 0, // Exclure les questions pour alléger la réponse
+          "courseSource._id": 0,
+        },
+      },
+      {
+        $sort: { createdAt: -1 },
+      },
+    ]);
 
     return res.status(200).json({
       success: true,
@@ -49,14 +89,10 @@ export const getQuizById = async (req, res) => {
       });
     }
 
-    // Optionnel : Ne retourner que les questions validées si isPublished est false
-    // et que l'utilisateur n'est pas l'enseignant propriétaire
-    // Décommentez si nécessaire :
-    /*
-    if (!quiz.isPublished) {
-      quiz.questions = quiz.questions.filter(q => q.status === true);
-    }
-    */
+    // Filtrer pour ne garder que les questions avec status === true
+    quiz.questions = quiz.questions.filter(
+      (question) => question.status === true
+    );
 
     // Trier les questions par ordre
     quiz.questions.sort((a, b) => a.order - b.order);
@@ -100,11 +136,14 @@ export const getQuizQuestions = async (req, res) => {
     // Trier les questions par ordre
     quiz.questions.sort((a, b) => a.order - b.order);
 
+    // Filter questions where status is true
+    const validQuestions = quiz.questions.filter((q) => q.status === true);
+
     return res.status(200).json({
       success: true,
       data: {
         title: quiz.title,
-        questions: quiz.questions,
+        questions: validQuestions,
       },
       message: "Questions récupérées avec succès",
     });
@@ -123,7 +162,7 @@ export const getQuizQuestions = async (req, res) => {
 export const submitQuizAnswers = async (req, res) => {
   try {
     const { id } = req.params;
-    const { answers } = req.body; // Format: { questionId: answerIndex, ... }
+    const { answers } = req.body; // Format: { questionIndex: answerIndex, ... }
 
     // Validation
     if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
@@ -150,12 +189,21 @@ export const submitQuizAnswers = async (req, res) => {
       });
     }
 
+    // IMPORTANT: Filter only validated questions (status === true)
+    // This must match what the frontend received
+    const validatedQuestions = quiz.questions.filter(
+      (question) => question.status === true
+    );
+
+    // Sort by order to ensure consistency
+    validatedQuestions.sort((a, b) => a.order - b.order);
+
     // Calculer le score
     let correctAnswers = 0;
-    let totalQuestions = quiz.questions.length;
+    const totalQuestions = validatedQuestions.length;
     const detailedResults = [];
 
-    quiz.questions.forEach((question, index) => {
+    validatedQuestions.forEach((question, index) => {
       const userAnswerIndex = answers[index];
       
       if (userAnswerIndex === undefined || userAnswerIndex === null) {
@@ -199,7 +247,9 @@ export const submitQuizAnswers = async (req, res) => {
     });
 
     // Calculer le pourcentage
-    const scorePercentage = ((correctAnswers / totalQuestions) * 100).toFixed(2);
+    const scorePercentage = totalQuestions > 0 
+      ? ((correctAnswers / totalQuestions) * 100).toFixed(2)
+      : 0;
 
     // Déterminer le statut
     let status = "failed";
